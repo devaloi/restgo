@@ -17,7 +17,7 @@ type errorBody struct {
 
 type errorDetail struct {
 	Message string                   `json:"message"`
-	Errors  []domain.ValidationError `json:"errors,omitempty"`
+	Details []domain.ValidationError `json:"details,omitempty"`
 }
 
 // JSON writes a JSON response with the given status code.
@@ -42,8 +42,8 @@ func ValidationErr(w http.ResponseWriter, verr *domain.ValidationErrors) {
 	w.WriteHeader(http.StatusUnprocessableEntity)
 	json.NewEncoder(w).Encode(errorBody{
 		Error: errorDetail{
-			Message: "validation error",
-			Errors:  verr.Errors,
+			Message: "validation failed",
+			Details: verr.Errors,
 		},
 	})
 }

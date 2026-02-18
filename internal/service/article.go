@@ -58,8 +58,12 @@ func (s *ArticleService) Update(ctx context.Context, userID, articleID string, r
 		return nil, domain.ErrForbidden
 	}
 
-	article.Title = req.Title
-	article.Body = req.Body
+	if req.Title != "" {
+		article.Title = req.Title
+	}
+	if req.Body != "" {
+		article.Body = req.Body
+	}
 
 	if err := s.repo.Update(ctx, article); err != nil {
 		return nil, fmt.Errorf("updating article: %w", err)
@@ -96,6 +100,8 @@ func validateCreateArticle(req domain.CreateArticleRequest) error {
 	var errs []domain.ValidationError
 	if req.Title == "" {
 		errs = append(errs, domain.ValidationError{Field: "title", Message: "title is required"})
+	} else if len(req.Title) > 255 {
+		errs = append(errs, domain.ValidationError{Field: "title", Message: "title must be at most 255 characters"})
 	}
 	if req.Body == "" {
 		errs = append(errs, domain.ValidationError{Field: "body", Message: "body is required"})
@@ -107,15 +113,19 @@ func validateCreateArticle(req domain.CreateArticleRequest) error {
 }
 
 func validateUpdateArticle(req domain.UpdateArticleRequest) error {
-	var errs []domain.ValidationError
-	if req.Title == "" {
-		errs = append(errs, domain.ValidationError{Field: "title", Message: "title is required"})
+	if req.Title == "" && req.Body == "" {
+		return &domain.ValidationErrors{
+			Errors: []domain.ValidationError{
+				{Field: "title/body", Message: "at least one of title or body is required"},
+			},
+		}
 	}
-	if req.Body == "" {
-		errs = append(errs, domain.ValidationError{Field: "body", Message: "body is required"})
-	}
-	if len(errs) > 0 {
-		return &domain.ValidationErrors{Errors: errs}
+	if req.Title != "" && len(req.Title) > 255 {
+		return &domain.ValidationErrors{
+			Errors: []domain.ValidationError{
+				{Field: "title", Message: "title must be at most 255 characters"},
+			},
+		}
 	}
 	return nil
 }

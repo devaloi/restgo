@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"strings"
+
 	"github.com/devaloi/restgo/internal/auth"
 	"github.com/devaloi/restgo/internal/domain"
 	"github.com/devaloi/restgo/internal/middleware"
@@ -62,12 +64,15 @@ func (s *UserService) Register(ctx context.Context, req domain.CreateUserRequest
 
 // Login authenticates a user and returns the user with a JWT.
 func (s *UserService) Login(ctx context.Context, req domain.LoginRequest) (*domain.User, string, error) {
-	if req.Email == "" || req.Password == "" {
-		return nil, "", &domain.ValidationErrors{
-			Errors: []domain.ValidationError{
-				{Field: "email/password", Message: "email and password are required"},
-			},
-		}
+	var loginErrs []domain.ValidationError
+	if req.Email == "" {
+		loginErrs = append(loginErrs, domain.ValidationError{Field: "email", Message: "email is required"})
+	}
+	if req.Password == "" {
+		loginErrs = append(loginErrs, domain.ValidationError{Field: "password", Message: "password is required"})
+	}
+	if len(loginErrs) > 0 {
+		return nil, "", &domain.ValidationErrors{Errors: loginErrs}
 	}
 
 	user, err := s.repo.GetByEmail(ctx, req.Email)
@@ -99,6 +104,8 @@ func validateCreateUser(req domain.CreateUserRequest) error {
 	var errs []domain.ValidationError
 	if req.Email == "" {
 		errs = append(errs, domain.ValidationError{Field: "email", Message: "email is required"})
+	} else if !strings.Contains(req.Email, "@") {
+		errs = append(errs, domain.ValidationError{Field: "email", Message: "invalid email format"})
 	}
 	if req.Password == "" {
 		errs = append(errs, domain.ValidationError{Field: "password", Message: "password is required"})
