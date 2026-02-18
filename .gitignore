@@ -1,5 +1,5 @@
 # Binaries
-restgo
+/restgo
 *.exe
 *.exe~
 *.dll
