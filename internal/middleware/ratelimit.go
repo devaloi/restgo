@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/devaloi/restgo/internal/domain"
 )
 
 type bucket struct {
@@ -17,7 +19,9 @@ type bucket struct {
 // token bucket algorithm. limit is the maximum requests per minute.
 func RateLimit(limit int) func(http.Handler) http.Handler {
 	var clients sync.Map
-	rate := float64(limit) / 60.0 // tokens per second
+	// Convert per-minute limit to a per-second refill rate. Each second that
+	// elapses adds (limit / 60) tokens back to the bucket, up to the maximum.
+	rate := float64(limit) / domain.SecondsPerMinute
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

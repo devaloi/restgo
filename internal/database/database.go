@@ -3,11 +3,11 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	_ "github.com/lib/pq"
 
 	"github.com/devaloi/restgo/internal/config"
+	"github.com/devaloi/restgo/internal/domain"
 )
 
 func Connect(cfg config.DBConfig) (*sql.DB, error) {
@@ -16,10 +16,10 @@ func Connect(cfg config.DBConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(10)
-	db.SetConnMaxLifetime(5 * time.Minute)
-	db.SetConnMaxIdleTime(1 * time.Minute)
+	db.SetMaxOpenConns(domain.DBMaxOpenConns)
+	db.SetMaxIdleConns(domain.DBMaxIdleConns)
+	db.SetConnMaxLifetime(domain.DBConnMaxLifetime)
+	db.SetConnMaxIdleTime(domain.DBConnMaxIdleTime)
 
 	if err := db.Ping(); err != nil {
 		db.Close()

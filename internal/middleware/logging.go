@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+// statusWriter wraps http.ResponseWriter to capture the status code for
+// logging. It must intercept WriteHeader and Write because the default
+// ResponseWriter does not expose the written status code.
 type statusWriter struct {
 	http.ResponseWriter
 	status int

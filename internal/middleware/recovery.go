@@ -14,7 +14,9 @@ func Recovery(next http.Handler) http.Handler {
 				slog.Error("panic recovered",
 					"error", err,
 					"stack", string(debug.Stack()),
+					"method", r.Method,
 					"path", r.URL.Path,
+					"request_id", RequestIDFromContext(r.Context()),
 				)
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusInternalServerError)

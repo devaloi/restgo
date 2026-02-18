@@ -3,6 +3,8 @@ package middleware
 import (
 	"net/http"
 	"strings"
+
+	"github.com/devaloi/restgo/internal/domain"
 )
 
 // CORS returns middleware that handles Cross-Origin Resource Sharing.
@@ -28,7 +30,7 @@ func CORS(allowedOrigins string) func(http.Handler) http.Handler {
 			}
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
-			w.Header().Set("Access-Control-Max-Age", "86400")
+			w.Header().Set("Access-Control-Max-Age", domain.CORSMaxAge)
 
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)

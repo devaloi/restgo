@@ -91,7 +91,10 @@ func (s *ArticleService) List(ctx context.Context, opts repository.ListOptions) 
 		opts.Page = 1
 	}
 	if opts.PerPage < 1 {
-		opts.PerPage = 20
+		opts.PerPage = domain.DefaultPageSize
+	}
+	if opts.PerPage > domain.MaxPageSize {
+		opts.PerPage = domain.MaxPageSize
 	}
 	return s.repo.List(ctx, opts)
 }
@@ -100,7 +103,7 @@ func validateCreateArticle(req domain.CreateArticleRequest) error {
 	var errs []domain.ValidationError
 	if req.Title == "" {
 		errs = append(errs, domain.ValidationError{Field: "title", Message: "title is required"})
-	} else if len(req.Title) > 255 {
+	} else if len(req.Title) > domain.MaxTitleLength {
 		errs = append(errs, domain.ValidationError{Field: "title", Message: "title must be at most 255 characters"})
 	}
 	if req.Body == "" {
@@ -120,7 +123,15 @@ func validateUpdateArticle(req domain.UpdateArticleRequest) error {
 			},
 		}
 	}
-	if req.Title != "" && len(req.Title) > 255 {
+	if err := validateTitleLength(req.Title); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateTitleLength checks that a non-empty title does not exceed MaxTitleLength.
+func validateTitleLength(title string) error {
+	if title != "" && len(title) > domain.MaxTitleLength {
 		return &domain.ValidationErrors{
 			Errors: []domain.ValidationError{
 				{Field: "title", Message: "title must be at most 255 characters"},

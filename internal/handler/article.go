@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -30,8 +29,7 @@ func (h *ArticleHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req domain.CreateArticleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		Error(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -69,7 +67,7 @@ func (h *ArticleHandler) List(w http.ResponseWriter, r *http.Request) {
 		opts.Page = 1
 	}
 	if opts.PerPage < 1 {
-		opts.PerPage = 20
+		opts.PerPage = domain.DefaultPageSize
 	}
 
 	totalPages := total / opts.PerPage
@@ -117,8 +115,7 @@ func (h *ArticleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req domain.UpdateArticleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		Error(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

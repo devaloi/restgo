@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -28,8 +27,7 @@ type authResponse struct {
 // Register handles POST /api/auth/register.
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		Error(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -45,8 +43,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 // Login handles POST /api/auth/login.
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req domain.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		Error(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

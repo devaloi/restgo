@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/devaloi/restgo/internal/domain"
@@ -86,18 +87,5 @@ func (r *PostgresUserRepository) Exists(ctx context.Context, email string) (bool
 
 // isUniqueViolation checks if the error is a PostgreSQL unique constraint violation.
 func isUniqueViolation(err error) bool {
-	return err != nil && contains(err.Error(), "duplicate key value violates unique constraint")
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchString(s, substr)
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	return err != nil && strings.Contains(err.Error(), "duplicate key value violates unique constraint")
 }

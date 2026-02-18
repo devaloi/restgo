@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/devaloi/restgo/internal/domain"
 )
 
 type Config struct {
@@ -58,7 +60,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid JWT_EXPIRY: %w", err)
 	}
 
-	limit := 100
+	limit := domain.DefaultRateLimit
 	if v := os.Getenv("RATE_LIMIT"); v != "" {
 		n := 0
 		for _, ch := range v {

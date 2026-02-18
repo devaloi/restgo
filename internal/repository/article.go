@@ -111,7 +111,7 @@ func (r *PostgresArticleRepository) List(ctx context.Context, opts ListOptions) 
 		opts.Page = 1
 	}
 	if opts.PerPage < 1 {
-		opts.PerPage = 20
+		opts.PerPage = domain.DefaultPageSize
 	}
 
 	// Validate sort field
@@ -150,7 +150,9 @@ func (r *PostgresArticleRepository) List(ctx context.Context, opts ListOptions) 
 		return nil, 0, fmt.Errorf("counting articles: %w", err)
 	}
 
-	// Fetch page
+	// Fetch page — sort field and direction are validated above (allow-listed),
+	// so interpolating them into the query is safe. All user-supplied filter
+	// values are passed as parameterized arguments ($N).
 	offset := (opts.Page - 1) * opts.PerPage
 	query := fmt.Sprintf(
 		"SELECT id, title, body, author_id, created_at, updated_at FROM articles %s ORDER BY %s %s LIMIT $%d OFFSET $%d",

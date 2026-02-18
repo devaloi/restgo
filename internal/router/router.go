@@ -1,6 +1,8 @@
 package router
 
 import (
+	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/devaloi/restgo/internal/auth"
@@ -27,7 +29,9 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
+		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+			slog.Error("failed to encode health response", "error", err)
+		}
 	})
 
 	// Public auth routes

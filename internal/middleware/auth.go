@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -26,6 +27,7 @@ func Auth(jwt *auth.JWTService) func(http.Handler) http.Handler {
 			token := strings.TrimPrefix(header, "Bearer ")
 			claims, err := jwt.Validate(token)
 			if err != nil {
+				slog.Warn("auth token validation failed", "error", err, "path", r.URL.Path)
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
 				w.Write([]byte(`{"error":{"message":"invalid or expired token"}}`))

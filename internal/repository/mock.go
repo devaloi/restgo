@@ -154,7 +154,7 @@ func (r *MockArticleRepository) List(_ context.Context, opts ListOptions) ([]dom
 		opts.Page = 1
 	}
 	if opts.PerPage < 1 {
-		opts.PerPage = 20
+		opts.PerPage = domain.DefaultPageSize
 	}
 
 	// Collect matching articles
