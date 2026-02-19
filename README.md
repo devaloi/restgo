@@ -1,8 +1,8 @@
 # restgo
 
-[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://go.dev)
+[![CI](https://github.com/devaloi/restgo/actions/workflows/ci.yml/badge.svg)](https://github.com/devaloi/restgo/actions/workflows/ci.yml)
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)]()
 
 A production-grade REST API in Go using only the standard library — user authentication, articles CRUD, pagination, and middleware stack. No Gin, no Chi, no Echo.
 

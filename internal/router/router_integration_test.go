@@ -11,11 +11,6 @@ import (
 
 // --- helpers ---
 
-type apiResponse struct {
-	Data json.RawMessage `json:"data"`
-	Meta json.RawMessage `json:"meta"`
-}
-
 type apiError struct {
 	Error struct {
 		Message string `json:"message"`
@@ -527,7 +522,7 @@ func TestIntegrationConsistentJSONFormat(t *testing.T) {
 	defer srv.Close()
 
 	// Health check has its own format
-	resp, body := doRequest(t, http.MethodGet, srv.URL+"/health", "", nil)
+	resp, _ := doRequest(t, http.MethodGet, srv.URL+"/health", "", nil)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("health: status=%d", resp.StatusCode)
 	}
@@ -537,7 +532,7 @@ func TestIntegrationConsistentJSONFormat(t *testing.T) {
 
 	// Success response wraps in {data: ...}
 	_, token := registerUser(t, srv, "format@test.com", "password123", "Format")
-	resp, body = doRequest(t, http.MethodGet, srv.URL+"/api/users/me", token, nil)
+	resp, body := doRequest(t, http.MethodGet, srv.URL+"/api/users/me", token, nil)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("profile: status=%d", resp.StatusCode)
 	}

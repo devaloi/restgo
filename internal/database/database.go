@@ -22,7 +22,7 @@ func Connect(cfg config.DBConfig) (*sql.DB, error) {
 	db.SetConnMaxIdleTime(domain.DBConnMaxIdleTime)
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 

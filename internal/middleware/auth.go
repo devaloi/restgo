@@ -20,7 +20,7 @@ func Auth(jwt *auth.JWTService) func(http.Handler) http.Handler {
 			if header == "" || !strings.HasPrefix(header, "Bearer ") {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":{"message":"missing or invalid authorization header"}}`))
+				_, _ = w.Write([]byte(`{"error":{"message":"missing or invalid authorization header"}}`))
 				return
 			}
 
@@ -30,7 +30,7 @@ func Auth(jwt *auth.JWTService) func(http.Handler) http.Handler {
 				slog.Warn("auth token validation failed", "error", err, "path", r.URL.Path)
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":{"message":"invalid or expired token"}}`))
+				_, _ = w.Write([]byte(`{"error":{"message":"invalid or expired token"}}`))
 				return
 			}
 

@@ -50,7 +50,8 @@ func (s *UserService) Register(ctx context.Context, req domain.CreateUserRequest
 		Name:         req.Name,
 	}
 
-	if err := s.repo.Create(ctx, user); err != nil {
+	err = s.repo.Create(ctx, user)
+	if err != nil {
 		return nil, "", fmt.Errorf("creating user: %w", err)
 	}
 
@@ -83,7 +84,8 @@ func (s *UserService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 		return nil, "", fmt.Errorf("finding user: %w", err)
 	}
 
-	if err := auth.ComparePassword(user.PasswordHash, req.Password); err != nil {
+	err = auth.ComparePassword(user.PasswordHash, req.Password)
+	if err != nil {
 		return nil, "", domain.ErrUnauthorized
 	}
 

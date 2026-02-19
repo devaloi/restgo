@@ -137,7 +137,8 @@ func TestMockArticleRepository_CRUD(t *testing.T) {
 	// Update
 	got.Title = "Updated Title"
 	got.Body = "Updated body"
-	if err := repo.Update(ctx, got); err != nil {
+	err = repo.Update(ctx, got)
+	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
 
@@ -147,7 +148,8 @@ func TestMockArticleRepository_CRUD(t *testing.T) {
 	}
 
 	// Delete
-	if err := repo.Delete(ctx, "art-1"); err != nil {
+	err = repo.Delete(ctx, "art-1")
+	if err != nil {
 		t.Fatalf("delete: %v", err)
 	}
 
@@ -204,7 +206,7 @@ func TestMockArticleRepository_List(t *testing.T) {
 	}
 
 	// Filter by author
-	articles, total, err = repo.List(ctx, ListOptions{Page: 1, PerPage: 10, AuthorID: "user-1"})
+	_, total, err = repo.List(ctx, ListOptions{Page: 1, PerPage: 10, AuthorID: "user-1"})
 	if err != nil {
 		t.Fatalf("list by author: %v", err)
 	}

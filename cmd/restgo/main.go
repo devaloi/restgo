@@ -33,7 +33,7 @@ func main() {
 		userRepo = repository.NewMockUserRepository()
 		articleRepo = repository.NewMockArticleRepository()
 	} else {
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		if err := database.RunMigrations(db, migrations.FS); err != nil {
 			log.Fatalf("failed to run migrations: %v", err)

@@ -164,7 +164,7 @@ func (r *PostgresArticleRepository) List(ctx context.Context, opts ListOptions) 
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing articles: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var articles []domain.Article
 	for rows.Next() {
