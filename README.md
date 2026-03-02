@@ -283,3 +283,7 @@ All configuration is via environment variables (see [`.env.example`](.env.exampl
 ## License
 
 [MIT](LICENSE)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — run `make all` before submitting.
