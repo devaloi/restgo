@@ -140,4 +140,3 @@ func validateTitleLength(title string) error {
 	}
 	return nil
 }
-

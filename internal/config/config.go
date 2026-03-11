@@ -48,6 +48,7 @@ type CORSConfig struct {
 
 type RateConfig struct {
 	Limit int
+	Burst int
 }
 
 type LogConfig struct {
@@ -72,6 +73,18 @@ func Load() (*Config, error) {
 		limit = n
 	}
 
+	burst := limit
+	if v := os.Getenv("RATE_BURST"); v != "" {
+		n := 0
+		for _, ch := range v {
+			if ch < '0' || ch > '9' {
+				return nil, fmt.Errorf("invalid RATE_BURST: %s", v)
+			}
+			n = n*10 + int(ch-'0')
+		}
+		burst = n
+	}
+
 	cfg := &Config{
 		DB: DBConfig{
 			Host:    envOrDefault("DB_HOST", "localhost"),
@@ -93,6 +106,7 @@ func Load() (*Config, error) {
 		},
 		Rate: RateConfig{
 			Limit: limit,
+			Burst: burst,
 		},
 		Log: LogConfig{
 			Level: envOrDefault("LOG_LEVEL", "info"),

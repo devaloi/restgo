@@ -15,13 +15,42 @@ type bucket struct {
 	lastCheck time.Time
 }
 
+// RateLimitConfig holds rate limiter parameters.
+type RateLimitConfig struct {
+	Limit int // requests per minute
+	Burst int // max burst size (bucket capacity)
+}
+
 // RateLimit returns middleware that limits requests per client IP using a
 // token bucket algorithm. limit is the maximum requests per minute.
-func RateLimit(limit int) func(http.Handler) http.Handler {
+// burst controls the maximum bucket capacity (defaults to limit if zero).
+func RateLimit(limit, burst int) func(http.Handler) http.Handler {
+	if burst <= 0 {
+		burst = limit
+	}
+
 	var clients sync.Map
-	// Convert per-minute limit to a per-second refill rate. Each second that
-	// elapses adds (limit / 60) tokens back to the bucket, up to the maximum.
 	rate := float64(limit) / domain.SecondsPerMinute
+
+	// Periodically clean up stale entries to prevent memory leaks.
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			now := time.Now()
+			clients.Range(func(key, val any) bool {
+				b := val.(*bucket)
+				mu := getMutex(key.(string))
+				mu.Lock()
+				if now.Sub(b.lastCheck) > 10*time.Minute {
+					clients.Delete(key)
+					ipMutexes.Delete(key)
+				}
+				mu.Unlock()
+				return true
+			})
+		}
+	}()
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -32,21 +61,18 @@ func RateLimit(limit int) func(http.Handler) http.Handler {
 
 			now := time.Now()
 			val, _ := clients.LoadOrStore(ip, &bucket{
-				tokens:    float64(limit),
+				tokens:    float64(burst),
 				lastCheck: now,
 			})
 			b := val.(*bucket)
 
-			// Synchronize per-bucket access via simple CAS-style with sync.Map
-			// For correctness under -race, we use a mutex embedded approach.
-			// Since sync.Map values are pointers, we guard with a global lock per IP.
 			mu := getMutex(ip)
 			mu.Lock()
 
 			elapsed := now.Sub(b.lastCheck).Seconds()
 			b.tokens += elapsed * rate
-			if b.tokens > float64(limit) {
-				b.tokens = float64(limit)
+			if b.tokens > float64(burst) {
+				b.tokens = float64(burst)
 			}
 			b.lastCheck = now
 
