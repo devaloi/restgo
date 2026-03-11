@@ -302,9 +302,7 @@ func TestArticleService_List_PageDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if articles == nil {
-		// Empty slice is acceptable, just verify no error
-	}
+	_ = articles // empty slice is acceptable, just verify no error
 }
 
 func TestArticleService_List_CapsPerPage(t *testing.T) {
