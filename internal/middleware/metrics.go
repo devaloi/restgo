@@ -135,9 +135,11 @@ func (m *Metrics) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 
+		mw := &metricsWriter{w: w}
+
 		// http_requests_total
-		fmt.Fprintln(w, "# HELP http_requests_total Total number of HTTP requests.")
-		fmt.Fprintln(w, "# TYPE http_requests_total counter")
+		mw.printLine("# HELP http_requests_total Total number of HTTP requests.")
+		mw.printLine("# TYPE http_requests_total counter")
 		var totalKeys []string
 		m.requestsTotal.Range(func(key, _ any) bool {
 			totalKeys = append(totalKeys, key.(string))
@@ -147,12 +149,12 @@ func (m *Metrics) Handler() http.HandlerFunc {
 		for _, key := range totalKeys {
 			val, _ := m.requestsTotal.Load(key)
 			method, status := parseMethodStatus(key)
-			fmt.Fprintf(w, "http_requests_total{method=%q,status=%q} %d\n", method, status, val.(*atomic.Int64).Load())
+			mw.printf("http_requests_total{method=%q,status=%q} %d\n", method, status, val.(*atomic.Int64).Load())
 		}
 
 		// http_request_duration_seconds
-		fmt.Fprintln(w, "# HELP http_request_duration_seconds HTTP request duration in seconds.")
-		fmt.Fprintln(w, "# TYPE http_request_duration_seconds histogram")
+		mw.printLine("# HELP http_request_duration_seconds HTTP request duration in seconds.")
+		mw.printLine("# TYPE http_request_duration_seconds histogram")
 		var durKeys []string
 		m.requestDuration.Range(func(key, _ any) bool {
 			durKeys = append(durKeys, key.(string))
@@ -165,20 +167,20 @@ func (m *Metrics) Handler() http.HandlerFunc {
 			method, path := parseMethodStatus(key)
 			db.mu.Lock()
 			for _, b := range db.buckets {
-				fmt.Fprintf(w, "http_request_duration_seconds_bucket{method=%q,path=%q,le=\"%.3f\"} %d\n",
+				mw.printf("http_request_duration_seconds_bucket{method=%q,path=%q,le=\"%.3f\"} %d\n",
 					method, path, b.le, b.count)
 			}
-			fmt.Fprintf(w, "http_request_duration_seconds_bucket{method=%q,path=%q,le=\"+Inf\"} %d\n",
+			mw.printf("http_request_duration_seconds_bucket{method=%q,path=%q,le=\"+Inf\"} %d\n",
 				method, path, db.count)
-			fmt.Fprintf(w, "http_request_duration_seconds_sum{method=%q,path=%q} %.6f\n", method, path, db.sum)
-			fmt.Fprintf(w, "http_request_duration_seconds_count{method=%q,path=%q} %d\n", method, path, db.count)
+			mw.printf("http_request_duration_seconds_sum{method=%q,path=%q} %.6f\n", method, path, db.sum)
+			mw.printf("http_request_duration_seconds_count{method=%q,path=%q} %d\n", method, path, db.count)
 			db.mu.Unlock()
 		}
 
 		// http_requests_inflight
-		fmt.Fprintln(w, "# HELP http_requests_inflight Current number of in-flight requests.")
-		fmt.Fprintln(w, "# TYPE http_requests_inflight gauge")
-		fmt.Fprintf(w, "http_requests_inflight %d\n", m.inflightGauge.Load())
+		mw.printLine("# HELP http_requests_inflight Current number of in-flight requests.")
+		mw.printLine("# TYPE http_requests_inflight gauge")
+		mw.printf("http_requests_inflight %d\n", m.inflightGauge.Load())
 	}
 }
 
@@ -189,4 +191,24 @@ func parseMethodStatus(key string) (string, string) {
 		}
 	}
 	return key, ""
+}
+
+// metricsWriter wraps an io.Writer and absorbs write errors to satisfy errcheck.
+type metricsWriter struct {
+	w   http.ResponseWriter
+	err error
+}
+
+func (mw *metricsWriter) printLine(s string) {
+	if mw.err != nil {
+		return
+	}
+	_, mw.err = fmt.Fprintln(mw.w, s)
+}
+
+func (mw *metricsWriter) printf(format string, args ...any) {
+	if mw.err != nil {
+		return
+	}
+	_, mw.err = fmt.Fprintf(mw.w, format, args...)
 }
