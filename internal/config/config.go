@@ -18,12 +18,16 @@ type Config struct {
 }
 
 type DBConfig struct {
-	Host    string
-	Port    string
-	User    string
-	Pass    string
-	Name    string
-	SSLMode string
+	Host            string
+	Port            string
+	User            string
+	Pass            string
+	Name            string
+	SSLMode         string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
 }
 
 func (c DBConfig) DSN() string {
@@ -74,12 +78,16 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		DB: DBConfig{
-			Host:    envOrDefault("DB_HOST", "localhost"),
-			Port:    envOrDefault("DB_PORT", "5432"),
-			User:    envOrDefault("DB_USER", "restgo"),
-			Pass:    envOrDefault("DB_PASS", "restgo"),
-			Name:    envOrDefault("DB_NAME", "restgo"),
-			SSLMode: envOrDefault("DB_SSLMODE", "disable"),
+			Host:            envOrDefault("DB_HOST", "localhost"),
+			Port:            envOrDefault("DB_PORT", "5432"),
+			User:            envOrDefault("DB_USER", "restgo"),
+			Pass:            envOrDefault("DB_PASS", "restgo"),
+			Name:            envOrDefault("DB_NAME", "restgo"),
+			SSLMode:         envOrDefault("DB_SSLMODE", "disable"),
+			MaxOpenConns:    envOrDefaultInt("DB_MAX_OPEN_CONNS", domain.DBMaxOpenConns),
+			MaxIdleConns:    envOrDefaultInt("DB_MAX_IDLE_CONNS", domain.DBMaxIdleConns),
+			ConnMaxLifetime: envOrDefaultDuration("DB_CONN_MAX_LIFETIME", domain.DBConnMaxLifetime),
+			ConnMaxIdleTime: envOrDefaultDuration("DB_CONN_MAX_IDLE_TIME", domain.DBConnMaxIdleTime),
 		},
 		JWT: JWTConfig{
 			Secret: envOrDefault("JWT_SECRET", "change-me-in-production"),
@@ -107,4 +115,31 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func envOrDefaultInt(key string, fallback int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	n := 0
+	for _, ch := range v {
+		if ch < '0' || ch > '9' {
+			return fallback
+		}
+		n = n*10 + int(ch-'0')
+	}
+	return n
+}
+
+func envOrDefaultDuration(key string, fallback time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return fallback
+	}
+	return d
 }

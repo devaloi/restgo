@@ -8,7 +8,8 @@ import (
 
 func TestLoadDefaults(t *testing.T) {
 	// Clear any env vars that might interfere
-	for _, key := range []string{"DB_HOST", "DB_PORT", "SERVER_PORT", "JWT_EXPIRY", "RATE_LIMIT"} {
+	for _, key := range []string{"DB_HOST", "DB_PORT", "SERVER_PORT", "JWT_EXPIRY", "RATE_LIMIT",
+		"DB_MAX_OPEN_CONNS", "DB_MAX_IDLE_CONNS", "DB_CONN_MAX_LIFETIME", "DB_CONN_MAX_IDLE_TIME"} {
 		os.Unsetenv(key)
 	}
 
@@ -22,6 +23,18 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.DB.Port != "5432" {
 		t.Errorf("expected DB.Port=5432, got %s", cfg.DB.Port)
+	}
+	if cfg.DB.MaxOpenConns != 25 {
+		t.Errorf("expected DB.MaxOpenConns=25, got %d", cfg.DB.MaxOpenConns)
+	}
+	if cfg.DB.MaxIdleConns != 10 {
+		t.Errorf("expected DB.MaxIdleConns=10, got %d", cfg.DB.MaxIdleConns)
+	}
+	if cfg.DB.ConnMaxLifetime != 5*time.Minute {
+		t.Errorf("expected DB.ConnMaxLifetime=5m, got %v", cfg.DB.ConnMaxLifetime)
+	}
+	if cfg.DB.ConnMaxIdleTime != 1*time.Minute {
+		t.Errorf("expected DB.ConnMaxIdleTime=1m, got %v", cfg.DB.ConnMaxIdleTime)
 	}
 	if cfg.Server.Port != "8080" {
 		t.Errorf("expected Server.Port=8080, got %s", cfg.Server.Port)
@@ -90,5 +103,35 @@ func TestDBConfigDSN(t *testing.T) {
 	expected := "host=localhost port=5432 user=restgo password=secret dbname=restgo sslmode=disable"
 	if cfg.DSN() != expected {
 		t.Errorf("expected DSN=%s, got %s", expected, cfg.DSN())
+	}
+}
+
+func TestLoadCustomDBPoolSettings(t *testing.T) {
+	os.Setenv("DB_MAX_OPEN_CONNS", "50")
+	os.Setenv("DB_MAX_IDLE_CONNS", "20")
+	os.Setenv("DB_CONN_MAX_LIFETIME", "10m")
+	os.Setenv("DB_CONN_MAX_IDLE_TIME", "3m")
+	defer func() {
+		os.Unsetenv("DB_MAX_OPEN_CONNS")
+		os.Unsetenv("DB_MAX_IDLE_CONNS")
+		os.Unsetenv("DB_CONN_MAX_LIFETIME")
+		os.Unsetenv("DB_CONN_MAX_IDLE_TIME")
+	}()
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.DB.MaxOpenConns != 50 {
+		t.Errorf("expected DB.MaxOpenConns=50, got %d", cfg.DB.MaxOpenConns)
+	}
+	if cfg.DB.MaxIdleConns != 20 {
+		t.Errorf("expected DB.MaxIdleConns=20, got %d", cfg.DB.MaxIdleConns)
+	}
+	if cfg.DB.ConnMaxLifetime != 10*time.Minute {
+		t.Errorf("expected DB.ConnMaxLifetime=10m, got %v", cfg.DB.ConnMaxLifetime)
+	}
+	if cfg.DB.ConnMaxIdleTime != 3*time.Minute {
+		t.Errorf("expected DB.ConnMaxIdleTime=3m, got %v", cfg.DB.ConnMaxIdleTime)
 	}
 }
