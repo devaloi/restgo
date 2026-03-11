@@ -92,3 +92,57 @@ func TestDBConfigDSN(t *testing.T) {
 		t.Errorf("expected DSN=%s, got %s", expected, cfg.DSN())
 	}
 }
+
+func TestLoadInvalidServerPort(t *testing.T) {
+	os.Setenv("SERVER_PORT", "99999")
+	defer os.Unsetenv("SERVER_PORT")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for out-of-range SERVER_PORT")
+	}
+}
+
+func TestLoadNonNumericServerPort(t *testing.T) {
+	os.Setenv("SERVER_PORT", "abc")
+	defer os.Unsetenv("SERVER_PORT")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for non-numeric SERVER_PORT")
+	}
+}
+
+func TestLoadZeroRateLimit(t *testing.T) {
+	os.Setenv("RATE_LIMIT", "0")
+	defer os.Unsetenv("RATE_LIMIT")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for zero RATE_LIMIT")
+	}
+}
+
+func TestLoadInvalidLogLevel(t *testing.T) {
+	os.Setenv("LOG_LEVEL", "verbose")
+	defer os.Unsetenv("LOG_LEVEL")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid LOG_LEVEL")
+	}
+}
+
+func TestLoadValidLogLevels(t *testing.T) {
+	for _, level := range []string{"debug", "info", "warn", "error"} {
+		os.Setenv("LOG_LEVEL", level)
+		cfg, err := Load()
+		os.Unsetenv("LOG_LEVEL")
+		if err != nil {
+			t.Fatalf("unexpected error for LOG_LEVEL=%s: %v", level, err)
+		}
+		if cfg.Log.Level != level {
+			t.Errorf("expected Log.Level=%s, got %s", level, cfg.Log.Level)
+		}
+	}
+}

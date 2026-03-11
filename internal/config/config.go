@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -99,7 +100,36 @@ func Load() (*Config, error) {
 		},
 	}
 
-	return cfg, nil
+	return cfg, cfg.validate()
+}
+
+func (c *Config) validate() error {
+	// Warn about insecure JWT secret (not an error so tests/dev still work).
+	if c.JWT.Secret == "change-me-in-production" {
+		slog.Warn("JWT_SECRET is set to the default value — change it in production")
+	}
+
+	port := 0
+	for _, ch := range c.Server.Port {
+		if ch < '0' || ch > '9' {
+			return fmt.Errorf("invalid SERVER_PORT: %s", c.Server.Port)
+		}
+		port = port*10 + int(ch-'0')
+	}
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("SERVER_PORT must be between 1 and 65535, got %d", port)
+	}
+
+	if c.Rate.Limit < 1 {
+		return fmt.Errorf("RATE_LIMIT must be at least 1, got %d", c.Rate.Limit)
+	}
+
+	validLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
+	if !validLevels[c.Log.Level] {
+		return fmt.Errorf("invalid LOG_LEVEL: %q (must be debug, info, warn, or error)", c.Log.Level)
+	}
+
+	return nil
 }
 
 func envOrDefault(key, fallback string) string {
