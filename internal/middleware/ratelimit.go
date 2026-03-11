@@ -10,18 +10,37 @@ import (
 	"github.com/devaloi/restgo/internal/domain"
 )
 
+// staleEntryTTL is how long an IP's bucket can be idle before cleanup removes it.
+const staleEntryTTL = 10 * time.Minute
+
+// cleanupInterval is the minimum time between successive cleanup sweeps.
+const cleanupInterval = 5 * time.Minute
+
 type bucket struct {
 	tokens    float64
 	lastCheck time.Time
 }
 
+// rateLimiter holds shared state for a rate limiter instance, including
+// periodic cleanup of stale per-IP entries to prevent unbounded memory growth.
+type rateLimiter struct {
+	clients   sync.Map // IP → *bucket
+	mutexes   sync.Map // IP → *sync.Mutex
+	rate      float64
+	limit     int
+	lastClean time.Time
+	cleanMu   sync.Mutex
+}
+
 // RateLimit returns middleware that limits requests per client IP using a
 // token bucket algorithm. limit is the maximum requests per minute.
+// Stale entries are periodically evicted to prevent memory leaks.
 func RateLimit(limit int) func(http.Handler) http.Handler {
-	var clients sync.Map
-	// Convert per-minute limit to a per-second refill rate. Each second that
-	// elapses adds (limit / 60) tokens back to the bucket, up to the maximum.
-	rate := float64(limit) / domain.SecondsPerMinute
+	rl := &rateLimiter{
+		rate:      float64(limit) / domain.SecondsPerMinute,
+		limit:     limit,
+		lastClean: time.Now(),
+	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,20 +50,17 @@ func RateLimit(limit int) func(http.Handler) http.Handler {
 			}
 
 			now := time.Now()
-			val, _ := clients.LoadOrStore(ip, &bucket{
+			val, _ := rl.clients.LoadOrStore(ip, &bucket{
 				tokens:    float64(limit),
 				lastCheck: now,
 			})
 			b := val.(*bucket)
 
-			// Synchronize per-bucket access via simple CAS-style with sync.Map
-			// For correctness under -race, we use a mutex embedded approach.
-			// Since sync.Map values are pointers, we guard with a global lock per IP.
-			mu := getMutex(ip)
+			mu := rl.getMutex(ip)
 			mu.Lock()
 
 			elapsed := now.Sub(b.lastCheck).Seconds()
-			b.tokens += elapsed * rate
+			b.tokens += elapsed * rl.rate
 			if b.tokens > float64(limit) {
 				b.tokens = float64(limit)
 			}
@@ -52,28 +68,55 @@ func RateLimit(limit int) func(http.Handler) http.Handler {
 
 			if b.tokens < 1 {
 				mu.Unlock()
-				retryAfter := int((1 - b.tokens) / rate)
+				retryAfter := int((1 - b.tokens) / rl.rate)
 				if retryAfter < 1 {
 					retryAfter = 1
 				}
 				w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
 				http.Error(w, `{"error":{"message":"rate limit exceeded"}}`, http.StatusTooManyRequests)
+				rl.maybeCleanup(now)
 				return
 			}
 
 			b.tokens--
 			mu.Unlock()
 
+			rl.maybeCleanup(now)
 			next.ServeHTTP(w, r)
 		})
 	}
 }
 
-var (
-	ipMutexes sync.Map
-)
-
-func getMutex(ip string) *sync.Mutex {
-	val, _ := ipMutexes.LoadOrStore(ip, &sync.Mutex{})
+func (rl *rateLimiter) getMutex(ip string) *sync.Mutex {
+	val, _ := rl.mutexes.LoadOrStore(ip, &sync.Mutex{})
 	return val.(*sync.Mutex)
+}
+
+// maybeCleanup removes stale IP entries if enough time has passed since
+// the last sweep. This prevents unbounded memory growth from transient clients.
+func (rl *rateLimiter) maybeCleanup(now time.Time) {
+	if now.Sub(rl.lastClean) < cleanupInterval {
+		return
+	}
+
+	if !rl.cleanMu.TryLock() {
+		return
+	}
+	defer rl.cleanMu.Unlock()
+
+	// Double-check after acquiring lock
+	if now.Sub(rl.lastClean) < cleanupInterval {
+		return
+	}
+
+	rl.clients.Range(func(key, value any) bool {
+		b := value.(*bucket)
+		if now.Sub(b.lastCheck) > staleEntryTTL {
+			rl.clients.Delete(key)
+			rl.mutexes.Delete(key)
+		}
+		return true
+	})
+
+	rl.lastClean = now
 }
