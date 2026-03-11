@@ -38,8 +38,6 @@ func ETag(next http.Handler) http.Handler {
 
 		if !ew.wroteHeader {
 			w.WriteHeader(ew.status)
-		} else {
-			// Headers already sent — just flush the buffered body.
 		}
 		_, _ = w.Write(ew.buf)
 	})
