@@ -40,7 +40,11 @@ func (s *ArticleService) Create(ctx context.Context, userID string, req domain.C
 
 // GetByID returns an article by ID.
 func (s *ArticleService) GetByID(ctx context.Context, id string) (*domain.Article, error) {
-	return s.repo.GetByID(ctx, id)
+	article, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("fetching article: %w", err)
+	}
+	return article, nil
 }
 
 // Update updates an article, verifying ownership.
@@ -51,7 +55,7 @@ func (s *ArticleService) Update(ctx context.Context, userID, articleID string, r
 
 	article, err := s.repo.GetByID(ctx, articleID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetching article for update: %w", err)
 	}
 
 	if article.AuthorID != userID {
@@ -75,14 +79,17 @@ func (s *ArticleService) Update(ctx context.Context, userID, articleID string, r
 func (s *ArticleService) Delete(ctx context.Context, userID, articleID string) error {
 	article, err := s.repo.GetByID(ctx, articleID)
 	if err != nil {
-		return err
+		return fmt.Errorf("fetching article for delete: %w", err)
 	}
 
 	if article.AuthorID != userID {
 		return domain.ErrForbidden
 	}
 
-	return s.repo.Delete(ctx, articleID)
+	if err := s.repo.Delete(ctx, articleID); err != nil {
+		return fmt.Errorf("deleting article: %w", err)
+	}
+	return nil
 }
 
 // List returns a paginated list of articles.
@@ -140,4 +147,3 @@ func validateTitleLength(title string) error {
 	}
 	return nil
 }
-

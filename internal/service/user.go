@@ -99,7 +99,11 @@ func (s *UserService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 
 // GetProfile returns a user by ID.
 func (s *UserService) GetProfile(ctx context.Context, userID string) (*domain.User, error) {
-	return s.repo.GetByID(ctx, userID)
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching user profile: %w", err)
+	}
+	return user, nil
 }
 
 func validateCreateUser(req domain.CreateUserRequest) error {

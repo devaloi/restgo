@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/devaloi/restgo/internal/domain"
@@ -90,6 +91,7 @@ func handleServiceError(w http.ResponseWriter, err error) {
 	case errors.Is(err, domain.ErrForbidden):
 		Error(w, http.StatusForbidden, "forbidden")
 	default:
+		slog.Error("unhandled service error", "error", err)
 		Error(w, http.StatusInternalServerError, "internal server error")
 	}
 }
