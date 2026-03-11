@@ -23,6 +23,16 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
+	slog.Info("configuration loaded",
+		"server_port", cfg.Server.Port,
+		"log_level", cfg.Log.Level,
+		"rate_limit", cfg.Rate.Limit,
+		"cors_origins", cfg.CORS.Origins,
+		"db_host", cfg.DB.Host,
+		"db_port", cfg.DB.Port,
+		"db_name", cfg.DB.Name,
+	)
+
 	// Attempt database connection; fall back to in-memory repos for demo/testing
 	var userRepo repository.UserRepository
 	var articleRepo repository.ArticleRepository
