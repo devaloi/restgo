@@ -110,7 +110,7 @@ func TestCORSDisallowedOrigin(t *testing.T) {
 }
 
 func TestRateLimit(t *testing.T) {
-	handler := RateLimit(2)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RateLimit(2, 2)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
