@@ -53,6 +53,7 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 	return middleware.Chain(mux,
 		middleware.Recovery,
 		middleware.RequestID,
+		middleware.SecurityHeaders,
 		middleware.Logging,
 		middleware.CORS(cfg.CORS.Origins),
 		middleware.RateLimit(cfg.Rate.Limit),
