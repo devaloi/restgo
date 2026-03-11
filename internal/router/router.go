@@ -56,5 +56,6 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 		middleware.Logging,
 		middleware.CORS(cfg.CORS.Origins),
 		middleware.RateLimit(cfg.Rate.Limit),
+		middleware.Timeout(cfg.Server.RequestTimeout),
 	)
 }

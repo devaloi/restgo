@@ -39,7 +39,8 @@ type JWTConfig struct {
 }
 
 type ServerConfig struct {
-	Port string
+	Port           string
+	RequestTimeout time.Duration
 }
 
 type CORSConfig struct {
@@ -72,6 +73,11 @@ func Load() (*Config, error) {
 		limit = n
 	}
 
+	requestTimeout, err := time.ParseDuration(envOrDefault("REQUEST_TIMEOUT", "30s"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid REQUEST_TIMEOUT: %w", err)
+	}
+
 	cfg := &Config{
 		DB: DBConfig{
 			Host:    envOrDefault("DB_HOST", "localhost"),
@@ -86,7 +92,8 @@ func Load() (*Config, error) {
 			Expiry: expiry,
 		},
 		Server: ServerConfig{
-			Port: envOrDefault("SERVER_PORT", "8080"),
+			Port:           envOrDefault("SERVER_PORT", "8080"),
+			RequestTimeout: requestTimeout,
 		},
 		CORS: CORSConfig{
 			Origins: envOrDefault("CORS_ORIGINS", "*"),
