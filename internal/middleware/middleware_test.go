@@ -269,3 +269,93 @@ func TestAuthMiddlewareExpiredToken(t *testing.T) {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestETag_SetsHeader(t *testing.T) {
+	handler := ETag(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	etag := rec.Header().Get("ETag")
+	if etag == "" {
+		t.Fatal("expected ETag header to be set")
+	}
+	if etag[0] != '"' || etag[len(etag)-1] != '"' {
+		t.Errorf("ETag should be quoted, got %q", etag)
+	}
+}
+
+func TestETag_NotModified(t *testing.T) {
+	body := []byte(`{"status":"ok"}`)
+	handler := ETag(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+
+	// First request to get ETag
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	etag := rec.Header().Get("ETag")
+
+	// Second request with If-None-Match
+	req2 := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req2.Header.Set("If-None-Match", etag)
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+
+	if rec2.Code != http.StatusNotModified {
+		t.Errorf("status = %d, want %d", rec2.Code, http.StatusNotModified)
+	}
+	if rec2.Body.Len() != 0 {
+		t.Errorf("body should be empty for 304, got %d bytes", rec2.Body.Len())
+	}
+}
+
+func TestETag_SkipsNonGET(t *testing.T) {
+	handler := ETag(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"id":"1"}`))
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/articles", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusCreated)
+	}
+	if rec.Header().Get("ETag") != "" {
+		t.Error("ETag should not be set for POST requests")
+	}
+}
+
+func TestETag_ConsistentHash(t *testing.T) {
+	body := []byte(`{"articles":[]}`)
+	handler := ETag(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+
+	req1 := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req1)
+
+	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+
+	if rec1.Header().Get("ETag") != rec2.Header().Get("ETag") {
+		t.Errorf("ETags should match for same content: %q vs %q",
+			rec1.Header().Get("ETag"), rec2.Header().Get("ETag"))
+	}
+}
