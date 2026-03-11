@@ -44,7 +44,7 @@ func Logging(next http.Handler) http.Handler {
 			"path", r.URL.Path,
 			"status", sw.status,
 			"duration", time.Since(start).String(),
-			"request_id", r.Header.Get("X-Request-ID"),
+			"request_id", RequestIDFromContext(r.Context()),
 		)
 	})
 }
