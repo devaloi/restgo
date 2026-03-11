@@ -15,8 +15,8 @@ const (
 
 // Rate limiting defaults.
 const (
-	DefaultRateLimit    = 100
-	SecondsPerMinute    = 60.0
+	DefaultRateLimit = 100
+	SecondsPerMinute = 60.0
 )
 
 // Database connection pool settings.

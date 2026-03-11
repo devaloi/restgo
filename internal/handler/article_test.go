@@ -25,19 +25,6 @@ func newArticleTestHandler() (*ArticleHandler, *repository.MockArticleRepository
 	return NewArticleHandler(svc), repo, jwt
 }
 
-// withAuthContext injects JWT claims into the request context so handlers
-// see an authenticated user without requiring the full auth middleware.
-func withAuthContext(r *http.Request, userID, email string) *http.Request {
-	claims := &auth.Claims{UserID: userID, Email: email}
-	ctx := context.WithValue(r.Context(), claimsKeyForTest{}, claims)
-	return r.WithContext(ctx)
-}
-
-// claimsKeyForTest matches the unexported claimsKey{} used in middleware/auth.go.
-// Since handler tests live in the handler package but need the middleware context key,
-// we use the public middleware.UserFromContext + Auth middleware to inject claims.
-type claimsKeyForTest struct{}
-
 // setupAuthMux wires a handler behind the auth middleware so the handler's
 // middleware.UserFromContext call works correctly.
 func setupAuthMux(jwt *auth.JWTService, method, pattern string, handlerFunc http.HandlerFunc) *http.ServeMux {
