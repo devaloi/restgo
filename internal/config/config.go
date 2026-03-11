@@ -39,7 +39,8 @@ type JWTConfig struct {
 }
 
 type ServerConfig struct {
-	Port string
+	Port            string
+	ShutdownTimeout time.Duration
 }
 
 type CORSConfig struct {
@@ -58,6 +59,11 @@ func Load() (*Config, error) {
 	expiry, err := time.ParseDuration(envOrDefault("JWT_EXPIRY", "24h"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_EXPIRY: %w", err)
+	}
+
+	shutdownTimeout, err := time.ParseDuration(envOrDefault("SHUTDOWN_TIMEOUT", "15s"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid SHUTDOWN_TIMEOUT: %w", err)
 	}
 
 	limit := domain.DefaultRateLimit
@@ -86,7 +92,8 @@ func Load() (*Config, error) {
 			Expiry: expiry,
 		},
 		Server: ServerConfig{
-			Port: envOrDefault("SERVER_PORT", "8080"),
+			Port:            envOrDefault("SERVER_PORT", "8080"),
+			ShutdownTimeout: shutdownTimeout,
 		},
 		CORS: CORSConfig{
 			Origins: envOrDefault("CORS_ORIGINS", "*"),
