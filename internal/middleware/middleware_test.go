@@ -109,6 +109,50 @@ func TestCORSDisallowedOrigin(t *testing.T) {
 	}
 }
 
+func TestCORSNullOriginRejected(t *testing.T) {
+	handler := CORS("*")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Header.Set("Origin", "null")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Errorf("ACAO should be empty for null origin, got %q", got)
+	}
+}
+
+func TestCORSVaryHeader(t *testing.T) {
+	handler := CORS("http://example.com")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Header.Set("Origin", "http://example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Vary"); got != "Origin" {
+		t.Errorf("Vary = %q, want %q", got, "Origin")
+	}
+}
+
+func TestCORSNoOriginHeader(t *testing.T) {
+	handler := CORS("*")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Errorf("ACAO should be empty when no Origin header sent, got %q", got)
+	}
+}
+
 func TestRateLimit(t *testing.T) {
 	handler := RateLimit(2)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
