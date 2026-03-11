@@ -1,8 +1,6 @@
 package router
 
 import (
-	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	"github.com/devaloi/restgo/internal/auth"
@@ -14,7 +12,8 @@ import (
 )
 
 // New creates a fully wired HTTP handler with all routes and middleware.
-func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo repository.ArticleRepository) http.Handler {
+// db may be nil when running with in-memory repositories.
+func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo repository.ArticleRepository, db handler.DBPinger) http.Handler {
 	jwt := auth.New(cfg.JWT.Secret, cfg.JWT.Expiry)
 
 	userSvc := service.NewUserService(userRepo, jwt)
@@ -22,17 +21,12 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 
 	userH := handler.NewUserHandler(userSvc)
 	articleH := handler.NewArticleHandler(articleSvc)
+	healthH := handler.NewHealthHandler(db)
 
 	mux := http.NewServeMux()
 
-	// Health check
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
-			slog.Error("failed to encode health response", "error", err)
-		}
-	})
+	// Health check with dependency status
+	mux.HandleFunc("GET /health", healthH.Check)
 
 	// Public auth routes
 	mux.HandleFunc("POST /api/auth/register", userH.Register)
