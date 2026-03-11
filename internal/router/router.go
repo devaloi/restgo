@@ -7,6 +7,7 @@ import (
 
 	"github.com/devaloi/restgo/internal/auth"
 	"github.com/devaloi/restgo/internal/config"
+	"github.com/devaloi/restgo/internal/domain"
 	"github.com/devaloi/restgo/internal/handler"
 	"github.com/devaloi/restgo/internal/middleware"
 	"github.com/devaloi/restgo/internal/repository"
@@ -56,5 +57,6 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 		middleware.Logging,
 		middleware.CORS(cfg.CORS.Origins),
 		middleware.RateLimit(cfg.Rate.Limit),
+		middleware.MaxBodySize(domain.MaxBodyBytes),
 	)
 }
