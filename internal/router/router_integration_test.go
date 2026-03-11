@@ -266,7 +266,7 @@ func TestIntegrationPagination(t *testing.T) {
 		t.Fatalf("page 3: status=%d", resp.StatusCode)
 	}
 	var page3 struct {
-		Data []json.RawMessage `json:"data"`
+		Data []json.RawMessage   `json:"data"`
 		Meta struct{ Total int } `json:"meta"`
 	}
 	json.Unmarshal(body, &page3)

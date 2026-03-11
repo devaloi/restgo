@@ -68,9 +68,20 @@ func Paginated(w http.ResponseWriter, data any, meta domain.PaginationMeta) {
 }
 
 // decodeJSON reads and decodes a JSON request body into v.
-// Returns false and writes a 400 error response if decoding fails.
+// Returns false and writes an error response if the content type is wrong
+// or decoding fails (including body-too-large from MaxBytesReader).
 func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	ct := r.Header.Get("Content-Type")
+	if ct != "" && ct != "application/json" {
+		Error(w, http.StatusUnsupportedMediaType, "content-type must be application/json")
+		return false
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+		if err.Error() == "http: request body too large" {
+			Error(w, http.StatusRequestEntityTooLarge, "request body too large")
+			return false
+		}
 		Error(w, http.StatusBadRequest, "invalid request body")
 		return false
 	}

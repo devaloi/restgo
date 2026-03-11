@@ -11,12 +11,13 @@ const (
 // Validation limits.
 const (
 	MaxTitleLength = 255
+	MaxBodyBytes   = 1 << 20 // 1 MB
 )
 
 // Rate limiting defaults.
 const (
-	DefaultRateLimit    = 100
-	SecondsPerMinute    = 60.0
+	DefaultRateLimit = 100
+	SecondsPerMinute = 60.0
 )
 
 // Database connection pool settings.
