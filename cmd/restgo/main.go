@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/devaloi/restgo/internal/circuitbreaker"
 	"github.com/devaloi/restgo/internal/config"
 	"github.com/devaloi/restgo/internal/database"
 	"github.com/devaloi/restgo/internal/repository"
@@ -40,8 +41,9 @@ func main() {
 		}
 		slog.Info("database migrations applied")
 
-		userRepo = repository.NewPostgresUserRepository(db)
-		articleRepo = repository.NewPostgresArticleRepository(db)
+		cb := circuitbreaker.New()
+		userRepo = repository.NewCBUserRepository(repository.NewPostgresUserRepository(db), cb)
+		articleRepo = repository.NewCBArticleRepository(repository.NewPostgresArticleRepository(db), cb)
 	}
 
 	handler := router.New(cfg, userRepo, articleRepo)
