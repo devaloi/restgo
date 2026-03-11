@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/devaloi/restgo/internal/domain"
 	"github.com/devaloi/restgo/internal/middleware"
@@ -45,8 +44,17 @@ func (h *ArticleHandler) Create(w http.ResponseWriter, r *http.Request) {
 // List handles GET /api/articles.
 func (h *ArticleHandler) List(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	page, _ := strconv.Atoi(q.Get("page"))
-	perPage, _ := strconv.Atoi(q.Get("per_page"))
+
+	page, err := parseOptionalInt(q.Get("page"))
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid page parameter: must be a positive integer")
+		return
+	}
+	perPage, err := parseOptionalInt(q.Get("per_page"))
+	if err != nil {
+		Error(w, http.StatusBadRequest, "invalid per_page parameter: must be a positive integer")
+		return
+	}
 
 	opts := repository.ListOptions{
 		Page:      page,

@@ -2,8 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/devaloi/restgo/internal/domain"
 )
@@ -75,4 +77,20 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 		return false
 	}
 	return true
+}
+
+// parseOptionalInt parses a string as a non-negative integer.
+// Returns 0 for empty strings. Returns an error for non-numeric or negative values.
+func parseOptionalInt(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, errors.New("not a valid integer")
+	}
+	if n < 0 {
+		return 0, errors.New("must not be negative")
+	}
+	return n, nil
 }
