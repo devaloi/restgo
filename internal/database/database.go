@@ -7,7 +7,6 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/devaloi/restgo/internal/config"
-	"github.com/devaloi/restgo/internal/domain"
 )
 
 func Connect(cfg config.DBConfig) (*sql.DB, error) {
@@ -16,10 +15,10 @@ func Connect(cfg config.DBConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
-	db.SetMaxOpenConns(domain.DBMaxOpenConns)
-	db.SetMaxIdleConns(domain.DBMaxIdleConns)
-	db.SetConnMaxLifetime(domain.DBConnMaxLifetime)
-	db.SetConnMaxIdleTime(domain.DBConnMaxIdleTime)
+	db.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
 	if err := db.Ping(); err != nil {
 		_ = db.Close()
