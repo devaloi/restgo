@@ -269,3 +269,56 @@ func TestAuthMiddlewareExpiredToken(t *testing.T) {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestTimeout_SetsContextDeadline(t *testing.T) {
+	var hasDeadline bool
+	handler := Timeout(5 * time.Second)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, hasDeadline = r.Context().Deadline()
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if !hasDeadline {
+		t.Error("context should have a deadline")
+	}
+	if rec.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+}
+
+func TestTimeout_CancelsSlowHandler(t *testing.T) {
+	var ctxErr error
+	handler := Timeout(50 * time.Millisecond)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+			ctxErr = r.Context().Err()
+		case <-time.After(5 * time.Second):
+			t.Error("timeout did not fire")
+		}
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if ctxErr == nil {
+		t.Error("context should have been cancelled")
+	}
+}
+
+func TestTimeout_FastHandlerCompletes(t *testing.T) {
+	handler := Timeout(5 * time.Second)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusCreated)
+	}
+}

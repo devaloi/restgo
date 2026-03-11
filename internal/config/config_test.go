@@ -8,7 +8,7 @@ import (
 
 func TestLoadDefaults(t *testing.T) {
 	// Clear any env vars that might interfere
-	for _, key := range []string{"DB_HOST", "DB_PORT", "SERVER_PORT", "JWT_EXPIRY", "RATE_LIMIT"} {
+	for _, key := range []string{"DB_HOST", "DB_PORT", "SERVER_PORT", "JWT_EXPIRY", "RATE_LIMIT", "REQUEST_TIMEOUT"} {
 		os.Unsetenv(key)
 	}
 
@@ -25,6 +25,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.Server.Port != "8080" {
 		t.Errorf("expected Server.Port=8080, got %s", cfg.Server.Port)
+	}
+	if cfg.Server.RequestTimeout != 30*time.Second {
+		t.Errorf("expected Server.RequestTimeout=30s, got %v", cfg.Server.RequestTimeout)
 	}
 	if cfg.JWT.Expiry != 24*time.Hour {
 		t.Errorf("expected JWT.Expiry=24h, got %v", cfg.JWT.Expiry)
@@ -75,6 +78,29 @@ func TestLoadInvalidExpiry(t *testing.T) {
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for invalid JWT_EXPIRY")
+	}
+}
+
+func TestLoadCustomRequestTimeout(t *testing.T) {
+	os.Setenv("REQUEST_TIMEOUT", "10s")
+	defer os.Unsetenv("REQUEST_TIMEOUT")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Server.RequestTimeout != 10*time.Second {
+		t.Errorf("expected Server.RequestTimeout=10s, got %v", cfg.Server.RequestTimeout)
+	}
+}
+
+func TestLoadInvalidRequestTimeout(t *testing.T) {
+	os.Setenv("REQUEST_TIMEOUT", "not-a-duration")
+	defer os.Unsetenv("REQUEST_TIMEOUT")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid REQUEST_TIMEOUT")
 	}
 }
 
