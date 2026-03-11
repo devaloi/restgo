@@ -23,6 +23,8 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 	userH := handler.NewUserHandler(userSvc)
 	articleH := handler.NewArticleHandler(articleSvc)
 
+	metrics := middleware.NewMetrics()
+
 	mux := http.NewServeMux()
 
 	// Health check
@@ -33,6 +35,9 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 			slog.Error("failed to encode health response", "error", err)
 		}
 	})
+
+	// Metrics endpoint (Prometheus format)
+	mux.HandleFunc("GET /metrics", metrics.Handler())
 
 	// Public auth routes
 	mux.HandleFunc("POST /api/auth/register", userH.Register)
@@ -56,5 +61,6 @@ func New(cfg *config.Config, userRepo repository.UserRepository, articleRepo rep
 		middleware.Logging,
 		middleware.CORS(cfg.CORS.Origins),
 		middleware.RateLimit(cfg.Rate.Limit),
+		metrics.Instrument,
 	)
 }
