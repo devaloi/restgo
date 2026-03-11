@@ -22,7 +22,7 @@ func setupServer(t *testing.T) (*httptest.Server, *repository.MockUserRepository
 		CORS: config.CORSConfig{Origins: "*"},
 		Rate: config.RateConfig{Limit: 1000},
 	}
-	h := New(cfg, userRepo, articleRepo)
+	h := New(cfg, userRepo, articleRepo, nil)
 	return httptest.NewServer(h), userRepo, articleRepo
 }
 
@@ -594,9 +594,17 @@ func TestHealthCheck(t *testing.T) {
 		t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusOK)
 	}
 
-	var body map[string]string
+	var body struct {
+		Data struct {
+			Status string            `json:"status"`
+			Checks map[string]string `json:"checks"`
+		} `json:"data"`
+	}
 	json.NewDecoder(resp.Body).Decode(&body)
-	if body["status"] != "ok" {
-		t.Errorf("status = %q, want %q", body["status"], "ok")
+	if body.Data.Status != "ok" {
+		t.Errorf("status = %q, want %q", body.Data.Status, "ok")
+	}
+	if body.Data.Checks["database"] != "not_configured" {
+		t.Errorf("database check = %q, want %q", body.Data.Checks["database"], "not_configured")
 	}
 }

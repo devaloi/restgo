@@ -12,6 +12,7 @@ import (
 
 	"github.com/devaloi/restgo/internal/config"
 	"github.com/devaloi/restgo/internal/database"
+	"github.com/devaloi/restgo/internal/handler"
 	"github.com/devaloi/restgo/internal/repository"
 	"github.com/devaloi/restgo/internal/router"
 	"github.com/devaloi/restgo/migrations"
@@ -26,10 +27,11 @@ func main() {
 	// Attempt database connection; fall back to in-memory repos for demo/testing
 	var userRepo repository.UserRepository
 	var articleRepo repository.ArticleRepository
+	var dbPinger handler.DBPinger
 
-	db, err := database.Connect(cfg.DB)
-	if err != nil {
-		slog.Warn("database unavailable, using in-memory repositories", "error", err)
+	db, dbErr := database.Connect(cfg.DB)
+	if dbErr != nil {
+		slog.Warn("database unavailable, using in-memory repositories", "error", dbErr)
 		userRepo = repository.NewMockUserRepository()
 		articleRepo = repository.NewMockArticleRepository()
 	} else {
@@ -42,13 +44,14 @@ func main() {
 
 		userRepo = repository.NewPostgresUserRepository(db)
 		articleRepo = repository.NewPostgresArticleRepository(db)
+		dbPinger = db
 	}
 
-	handler := router.New(cfg, userRepo, articleRepo)
+	h := router.New(cfg, userRepo, articleRepo, dbPinger)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
-		Handler:      handler,
+		Handler:      h,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
